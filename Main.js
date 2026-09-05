@@ -61,15 +61,9 @@ function logImportRangeFormulas(spreadsheetId) {
     throw new Error('logImportRangeFormulas: spreadsheetId was not provided and there is no active spreadsheet.');
   }
 
-  const cells = ss.createTextFinder('IMPORTRANGE')
-    .matchCase(false)
-    .matchFormulaText(true)
-    .findAll();
-
-  Logger.log(`Cells found by TextFinder: ${cells.length}`);
-  cells.forEach(cell => {
-    const formula = cell.getFormula();
+  forEachImportRangeFormula_(ss, (sheet, formula, row, column) => {
     const args = extractImportRangeFirstArgs_(formula);
-    Logger.log(`${cell.getSheet().getName()}!${cell.getA1Notation()} -> ${formula} (args: ${JSON.stringify(args)})`);
+    const a1Notation = sheet.getRange(row, column).getA1Notation();
+    Logger.log(`${sheet.getName()}!${a1Notation} -> ${formula} (args: ${JSON.stringify(args)})`);
   });
 }

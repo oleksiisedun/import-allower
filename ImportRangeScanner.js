@@ -14,7 +14,7 @@ const BARE_SPREADSHEET_ID_REGEX = /^[a-zA-Z0-9-_]{20,}$/;
  * Finds every unique source spreadsheet ID referenced by IMPORTRANGE
  * anywhere in a spreadsheet — across all sheets, and including formulas
  * that combine multiple IMPORTRANGE calls (e.g. inside VLOOKUP, joined with
- * &, or as separate array items).
+ * &, or as separate array-literal items like `={IMPORTRANGE(...);IMPORTRANGE(...)}`).
  * @param {string} [spreadsheetId] - Defaults to the active spreadsheet (only resolvable from a container-bound script or an installable trigger).
  * @returns {string[]}
  */
@@ -31,35 +31,57 @@ function findImportRangeSourceIds(spreadsheetId) {
  * @returns {string[]}
  */
 function findImportRangeSourceIdsForSpreadsheet_(ss) {
-  const cells = ss.createTextFinder('IMPORTRANGE')
-    .matchCase(false)
-    .matchFormulaText(true)
-    .findAll();
-
   const ids = new Set();
-  cells.forEach(cell => {
-    const formula = cell.getFormula();
+  forEachImportRangeFormula_(ss, (sheet, formula) => {
     extractImportRangeFirstArgs_(formula).forEach(ref => {
-      const id = resolveImportRangeSourceId_(cell, ref);
+      const id = resolveImportRangeSourceId_(sheet, ref);
       if (id) ids.add(id);
     });
   });
-
   return Array.from(ids);
+}
+
+/**
+ * Walks every cell in every sheet and invokes `callback` for each one whose
+ * formula contains IMPORTRANGE. Reads formulas directly via getFormulas()
+ * rather than via TextFinder — TextFinder can attribute a match inside a
+ * spilled array-literal formula (e.g. `={IMPORTRANGE(...);IMPORTRANGE(...)}`)
+ * to one of the spilled result cells instead of the anchor cell that
+ * actually holds the formula text, and getFormula() on a spilled cell
+ * returns '', silently losing whichever IMPORTRANGE call landed there.
+ * Reading getFormulas() straight from each sheet's data range sidesteps
+ * that entirely: only the anchor cell ever has non-empty formula text.
+ * @param {GoogleAppsScript.Spreadsheet.Spreadsheet} ss
+ * @param {(sheet: GoogleAppsScript.Spreadsheet.Sheet, formula: string, row: number, column: number) => void} callback - row/column are 1-indexed sheet coordinates of the formula cell.
+ * @returns {void}
+ */
+function forEachImportRangeFormula_(ss, callback) {
+  ss.getSheets().forEach(sheet => {
+    const dataRange = sheet.getDataRange();
+    const startRow = dataRange.getRow();
+    const startColumn = dataRange.getColumn();
+    const formulas = dataRange.getFormulas();
+    formulas.forEach((rowFormulas, rowOffset) => {
+      rowFormulas.forEach((formula, colOffset) => {
+        if (!formula || formula.toUpperCase().indexOf('IMPORTRANGE') === -1) return;
+        callback(sheet, formula, startRow + rowOffset, startColumn + colOffset);
+      });
+    });
+  });
 }
 
 /**
  * Resolves one IMPORTRANGE call's raw first argument (a URL/ID literal, or
  * an unresolved cell-reference expression) down to a spreadsheet ID.
- * @param {GoogleAppsScript.Spreadsheet.Range} cell - The cell whose formula the argument came from, used to resolve cell references relative to its own sheet.
+ * @param {GoogleAppsScript.Spreadsheet.Sheet} sheet - The sheet the formula lives on, used to resolve cell references.
  * @param {string} ref
  * @returns {string|null}
  */
-function resolveImportRangeSourceId_(cell, ref) {
+function resolveImportRangeSourceId_(sheet, ref) {
   let resolved = ref;
   if (!/^https?:\/\//.test(ref) && !BARE_SPREADSHEET_ID_REGEX.test(ref)) {
     // not already a URL or a bare spreadsheet ID literal — must be a cell reference (e.g. B1); resolve its value
-    try { resolved = String(cell.getSheet().getRange(ref).getValue()); }
+    try { resolved = String(sheet.getRange(ref).getValue()); }
     catch (e) { return null; }
   }
 
