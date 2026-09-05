@@ -92,7 +92,7 @@ graph TD
   Main -->|"grant results"| Caller
 ```
 
-`ImportRangeScanner.js` uses `TextFinder` to locate every cell whose formula mentions `IMPORTRANGE`, then walks each formula's text to find every `IMPORTRANGE(...)` call (not just the first) and pull out its first argument — a quoted URL/ID literal, or an unquoted cell reference, which is resolved by reading that cell's value. Each resolved value is reduced to a bare spreadsheet ID (whether it started as a full URL or an ID literal) and deduplicated across the whole spreadsheet.
+`ImportRangeScanner.js` reads every sheet's formulas directly (via `getFormulas()`) to locate every cell whose formula mentions `IMPORTRANGE` — including a spilled array-literal formula like `={IMPORTRANGE(...);IMPORTRANGE(...)}`, where only the anchor cell holds the formula text — then walks each formula's text to find every `IMPORTRANGE(...)` call (not just the first) and pull out its first argument — a quoted URL/ID literal, or an unquoted cell reference, which is resolved by reading that cell's value. Each resolved value is reduced to a bare spreadsheet ID (whether it started as a full URL or an ID literal) and deduplicated across the whole spreadsheet.
 
 `PermissionGranter.js` then POSTs one request per unique source ID to the same internal `addimportrangepermissions` endpoint the Sheets UI's "Allow access" button calls, using the running user's own OAuth token — so the user must already have at least view access to each source, or the grant request itself will fail (this library records access grants, it doesn't bypass Drive sharing).
 
@@ -108,7 +108,7 @@ Nothing about the destination spreadsheet's content is ever modified — this on
 
 There's no automated test framework in Apps Script. Test manually from the Apps Script editor against a scratch spreadsheet:
 
-1. Add several `IMPORTRANGE` formulas across different sheets: a plain one, one nested inside another function (e.g. `SUM(IMPORTRANGE(...))`), and one formula combining two `IMPORTRANGE` calls (e.g. `IMPORTRANGE(id1, "A:B") & IMPORTRANGE(id2, "A:B")`). Use at least one source spreadsheet the destination has never been granted access to before.
+1. Add several `IMPORTRANGE` formulas across different sheets: a plain one, one nested inside another function (e.g. `SUM(IMPORTRANGE(...))`), one formula combining two `IMPORTRANGE` calls with `&` (e.g. `IMPORTRANGE(id1, "A:B") & IMPORTRANGE(id2, "A:B")`), and one array-literal formula combining two `IMPORTRANGE` calls (e.g. `={IMPORTRANGE(id1, "A1");IMPORTRANGE(id2, "A1")}`). Use at least one source spreadsheet the destination has never been granted access to before.
 2. Run `logImportRangeFormulas()` first and confirm every `IMPORTRANGE` cell is listed with the correct source ID(s) extracted, including both IDs from the combined formula.
 3. Run `autoApproveImportRanges()` and confirm every result has `ok: true`.
 4. Reload the spreadsheet and confirm the previously-blocked cells now show real data instead of a "needs permission" / `#REF!` error, with no manual click required.

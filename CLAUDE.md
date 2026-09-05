@@ -14,6 +14,10 @@ This library only ever reads formulas/values (to detect and resolve `IMPORTRANGE
 
 A formula can combine multiple `IMPORTRANGE` calls (inside `VLOOKUP`, joined with `&`, as separate array items). `ImportRangeScanner.js`'s `extractImportRangeFirstArgs_` finds every `IMPORTRANGE(` occurrence in the formula text via a global regex, then `parseFirstArg_` hand-parses each call's first argument (respecting quoted-string escaping and nested parens) rather than relying on a single regex match — a single match would silently miss every `IMPORTRANGE` after the first one in a combined formula. Don't collapse this back to a single-match regex; that regressed exactly the "multiple IMPORTRANGE per formula" case this was built to handle.
 
+## Why cell discovery reads getFormulas() directly instead of using TextFinder
+
+`forEachImportRangeFormula_` walks every sheet's `getDataRange().getFormulas()` grid rather than using `ss.createTextFinder('IMPORTRANGE').findAll()`. TextFinder was tried first and works for most formulas, but for an array-literal formula that spills across cells (e.g. `={IMPORTRANGE(...);IMPORTRANGE(...)}`), it can attribute a match to one of the spilled result cells instead of the anchor cell that actually holds the formula text — and `getFormula()` on a spilled cell returns `''`, silently dropping whichever `IMPORTRANGE` call landed there. Reading `getFormulas()` straight from each sheet's data range sidesteps this: only the anchor cell of any formula (spilled or not) ever has non-empty formula text, so nothing gets attributed to the wrong cell. Don't reintroduce TextFinder for this; it regresses the array-literal case.
+
 ## Why the trigger installer takes a function name, not a function reference
 
 `installAutoApproveTrigger` in `Main.js` takes `handlerFunctionName: string`, not a function value. Apps Script's installable-trigger service resolves the handler by name against the *calling* project's global scope at trigger-fire time — a trigger can never point directly at a library-qualified function like `ImportAllower.autoApproveImportRanges`. The consuming project must define its own top-level wrapper function and pass that name in. Don't "simplify" this to accept a callback; it would work when tested inline (same project) and silently break for every real consumer (a different project, calling through the library).
@@ -21,7 +25,7 @@ A formula can combine multiple `IMPORTRANGE` calls (inside `VLOOKUP`, joined wit
 ## File layout
 
 - `Main.js` — public API: `autoApproveImportRanges`, `installAutoApproveTrigger`, `logImportRangeFormulas`.
-- `ImportRangeScanner.js` — `IMPORTRANGE` detection: `findImportRangeSourceIds` (public) plus the formula-walking internals (`extractImportRangeFirstArgs_`, `parseFirstArg_`, `resolveImportRangeSourceId_`).
+- `ImportRangeScanner.js` — `IMPORTRANGE` detection: `findImportRangeSourceIds` (public) plus the formula-walking internals (`forEachImportRangeFormula_`, `extractImportRangeFirstArgs_`, `parseFirstArg_`, `resolveImportRangeSourceId_`).
 - `PermissionGranter.js` — `grantImportRangeAccess_`, the only file that calls `UrlFetchApp`.
 
 ## Testing
