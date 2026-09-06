@@ -20,9 +20,7 @@ function autoApproveImportRanges(spreadsheetId) {
     return [];
   }
 
-  const results = grantImportRangeAccess_(ss.getId(), sourceIds);
-  results.forEach(r => Logger.log(`Source ${r.sourceId} -> HTTP ${r.httpStatus}${r.ok ? '' : ' (FAILED: ' + r.responseText + ')'}`));
-  return results;
+  return grantImportRangeAccess_(ss.getId(), sourceIds);
 }
 
 /**
