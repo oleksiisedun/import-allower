@@ -22,10 +22,14 @@ A formula can combine multiple `IMPORTRANGE` calls (inside `VLOOKUP`, joined wit
 
 `installAutoApproveTrigger` in `Main.js` takes `handlerFunctionName: string`, not a function value. Apps Script's installable-trigger service resolves the handler by name against the *calling* project's global scope at trigger-fire time — a trigger can never point directly at a library-qualified function like `ImportAllower.autoApproveImportRanges`. The consuming project must define its own top-level wrapper function and pass that name in. Don't "simplify" this to accept a callback; it would work when tested inline (same project) and silently break for every real consumer (a different project, calling through the library).
 
+## Why grant requests are sent in chunked batches, not all at once or one at a time
+
+`grantImportRangeAccess_` in `PermissionGranter.js` sends requests via `UrlFetchApp.fetchAll` in batches of `GRANT_BATCH_SIZE_` (10) rather than one single `fetchAll` for every source, or one `UrlFetchApp.fetch` per source. A single `fetchAll` is fastest but gives no progress feedback until every source is done — `autoApproveImportRanges` can take a while with many `IMPORTRANGE` sources, and the caller wants to see results in the log as they happen. One-at-a-time `fetch` calls log immediately but lose the parallelism `fetchAll` provides within a batch, making the whole scan noticeably slower. Chunking keeps most of the speed of `fetchAll` while still surfacing a log line every `GRANT_BATCH_SIZE_` sources. Don't collapse this back to either extreme without re-confirming the speed/feedback tradeoff still favors it.
+
 ## File layout
 
 - `Main.js` — public API: `autoApproveImportRanges`, `installAutoApproveTrigger`, `logImportRangeFormulas`.
-- `ImportRangeScanner.js` — `IMPORTRANGE` detection: `findImportRangeSourceIds` (public) plus the formula-walking internals (`forEachImportRangeFormula_`, `extractImportRangeFirstArgs_`, `parseFirstArg_`, `resolveImportRangeSourceId_`).
+- `ImportRangeScanner.js` — `IMPORTRANGE` detection: `findImportRangeSourceIds` (public) plus the formula-walking internals (`findImportRangeSourceIdsForSpreadsheet_`, `forEachImportRangeFormula_`, `extractImportRangeFirstArgs_`, `parseFirstArg_`, `resolveImportRangeSourceId_`).
 - `PermissionGranter.js` — `grantImportRangeAccess_`, the only file that calls `UrlFetchApp`.
 
 ## Testing

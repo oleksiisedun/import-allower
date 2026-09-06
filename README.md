@@ -96,6 +96,8 @@ graph TD
 
 `PermissionGranter.js` then POSTs one request per unique source ID to the same internal `addimportrangepermissions` endpoint the Sheets UI's "Allow access" button calls, using the running user's own OAuth token — so the user must already have at least view access to each source, or the grant request itself will fail (this library records access grants, it doesn't bypass Drive sharing).
 
+Requests are sent in batches of 10 (via `UrlFetchApp.fetchAll`) rather than all at once, and each batch's results are written to the log as soon as they're known — so with many sources you'll see grant results appear incrementally in the execution log rather than only after the whole scan finishes.
+
 Nothing about the destination spreadsheet's content is ever modified — this only affects the (destination, source) access-grant record.
 
 ## Known limitations
