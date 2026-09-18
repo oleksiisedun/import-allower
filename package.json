@@ -1,0 +1,7 @@
+{
+  "name": "import-allower",
+  "private": true,
+  "devDependencies": {
+    "@types/google-apps-script": "^1.0.83"
+  }
+}
