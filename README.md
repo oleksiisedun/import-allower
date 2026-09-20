@@ -108,7 +108,7 @@ Nothing about the destination spreadsheet's content is ever modified — this on
 
 ## Testing
 
-Run `npm run check` (ESLint + a `checkJs` type check over `src/`) to catch static mistakes before pushing. There's no automated test framework in Apps Script, so behavior is tested manually from the Apps Script editor against a scratch spreadsheet:
+Run `npm run check` (ESLint, a `checkJs` type check over `src/`, and the unit tests) before pushing. The unit tests (`npm run test`, Node's built-in test runner) cover the pure `IMPORTRANGE` formula parsing in `src/ImportRangeScanner.js`. Everything that calls `SpreadsheetApp` or `UrlFetchApp` can only run inside Apps Script, so that behavior is tested manually from the Apps Script editor against a scratch spreadsheet:
 
 1. Add several `IMPORTRANGE` formulas across different sheets: a plain one, one nested inside another function (e.g. `SUM(IMPORTRANGE(...))`), one formula combining two `IMPORTRANGE` calls with `&` (e.g. `IMPORTRANGE(id1, "A:B") & IMPORTRANGE(id2, "A:B")`), and one array-literal formula combining two `IMPORTRANGE` calls (e.g. `={IMPORTRANGE(id1, "A1");IMPORTRANGE(id2, "A1")}`). Use at least one source spreadsheet the destination has never been granted access to before.
 2. Run `logImportRangeFormulas()` first and confirm every `IMPORTRANGE` cell is listed with the correct source ID(s) extracted, including both IDs from the combined formula.
