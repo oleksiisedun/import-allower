@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "checkJs": true,
+    "allowJs": true,
+    "noEmit": true,
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "types": ["google-apps-script"],
+    "strict": true
+  },
+  "include": ["src/**/*.js"]
+}
