@@ -28,13 +28,19 @@ A formula can combine multiple `IMPORTRANGE` calls (inside `VLOOKUP`, joined wit
 
 ## File layout
 
-- `Main.js` — public API: `autoApproveImportRanges`, `installAutoApproveTrigger`, `logImportRangeFormulas`.
-- `ImportRangeScanner.js` — `IMPORTRANGE` detection: `findImportRangeSourceIds` (public) plus the formula-walking internals (`findImportRangeSourceIdsForSpreadsheet_`, `forEachImportRangeFormula_`, `extractImportRangeFirstArgs_`, `parseFirstArg_`, `resolveImportRangeSourceId_`).
-- `PermissionGranter.js` — `grantImportRangeAccess_`, the only file that calls `UrlFetchApp`.
+Deployable code lives in `src/` (`.clasp.json` has `"rootDir": "src"`, so only `src/` is pushed; tooling and docs stay at the root). `.clasp.json` is tracked in git, so `rootDir` persists across checkouts — re-add it if `clasp clone`/`clasp create` ever regenerates the file.
+
+- `src/Main.js` — public API: `autoApproveImportRanges`, `installAutoApproveTrigger`, `logImportRangeFormulas`.
+- `src/ImportRangeScanner.js` — `IMPORTRANGE` detection: `findImportRangeSourceIds` (public) plus the formula-walking internals (`findImportRangeSourceIdsForSpreadsheet_`, `forEachImportRangeFormula_`, `extractImportRangeFirstArgs_`, `parseFirstArg_`, `resolveImportRangeSourceId_`).
+- `src/PermissionGranter.js` — `grantImportRangeAccess_`, the only file that calls `UrlFetchApp`.
+- `src/SpreadsheetResolver.js` — `resolveSpreadsheet_`, the shared "given ID or active spreadsheet" lookup every public entry point uses.
+- `src/appsscript.json` — manifest.
 
 ## Testing
 
-No automated test framework in Apps Script. Test manually from the Apps Script editor — see README.md's "Testing" section for the checklist.
+Run `npm run check` after every edit — it runs `npm run lint` (ESLint, configured for the Apps Script runtime in `eslint.config.mjs`) and `npm run typecheck` (`tsc` with `checkJs` over `src/`, see `jsconfig.json`). Both are fast and offline. Because all files share one global scope, ESLint's `no-undef` is off and the type check is what catches a wrong cross-file call.
+
+No automated test framework in Apps Script. Test behavior manually from the Apps Script editor — see README.md's "Testing" section for the checklist.
 
 ## Deploying
 

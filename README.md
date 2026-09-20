@@ -10,7 +10,7 @@ It detects `IMPORTRANGE` wherever it appears — a lone formula, one nested insi
 
 ## Deploying the library
 
-1. Open the project in the Apps Script editor (`clasp open`, or push first with `clasp push` if you've made local changes).
+1. Open the project in the Apps Script editor (`clasp open`, or push first with `clasp push` if you've made local changes). Only `src/` is deployed — `.clasp.json` must keep `"rootDir": "src"`, so re-add it if you re-run `clasp clone`/`clasp create`.
 2. **Deploy > New deployment**, select type **Library**, and create the deployment. Note the **Script ID** shown under **Project Settings** (also the `scriptId` in this repo's `.clasp.json`).
 3. Each time you change the library's code, cut a new deployment version (or a new deployment) — consuming projects pin to a specific version number, so old versions keep working until the consumer explicitly updates.
 
@@ -108,7 +108,7 @@ Nothing about the destination spreadsheet's content is ever modified — this on
 
 ## Testing
 
-There's no automated test framework in Apps Script. Test manually from the Apps Script editor against a scratch spreadsheet:
+Run `npm run check` (ESLint + a `checkJs` type check over `src/`) to catch static mistakes before pushing. There's no automated test framework in Apps Script, so behavior is tested manually from the Apps Script editor against a scratch spreadsheet:
 
 1. Add several `IMPORTRANGE` formulas across different sheets: a plain one, one nested inside another function (e.g. `SUM(IMPORTRANGE(...))`), one formula combining two `IMPORTRANGE` calls with `&` (e.g. `IMPORTRANGE(id1, "A:B") & IMPORTRANGE(id2, "A:B")`), and one array-literal formula combining two `IMPORTRANGE` calls (e.g. `={IMPORTRANGE(id1, "A1");IMPORTRANGE(id2, "A1")}`). Use at least one source spreadsheet the destination has never been granted access to before.
 2. Run `logImportRangeFormulas()` first and confirm every `IMPORTRANGE` cell is listed with the correct source ID(s) extracted, including both IDs from the combined formula.
