@@ -40,7 +40,7 @@ Deployable code lives in `src/` (`.clasp.json` has `"rootDir": "src"`, so only `
 
 Run `npm run check` after every edit — it runs `npm run lint` (ESLint, configured for the Apps Script runtime in `eslint.config.mjs`), `npm run typecheck` (`tsc` with `checkJs` over `src/`, see `jsconfig.json`) and `npm run test`. All are fast and offline. Because all files share one global scope, ESLint's `no-undef` is off and the type check is what catches a wrong cross-file call.
 
-`npm run test` uses the built-in `node --test` on `test/*.test.mjs` (kept outside `src/` so clasp never pushes them). It covers only the pure formula-parsing logic in `ImportRangeScanner.js` — `extractImportRangeFirstArgs_`, `parseFirstArg_`, `resolveImportRangeSourceId_`. The source files have no exports, so the tests load them into a `node:vm` context. Anything touching `SpreadsheetApp` / `UrlFetchApp` (the rest of the library) is tested manually from the Apps Script editor — see README.md's "Testing" section for the checklist. Don't add mock-everything tests for those wrappers.
+`npm run test` uses the built-in `node --test` on `tests/*.test.mjs` (kept outside `src/` so clasp never pushes them). It covers only the pure formula-parsing logic in `ImportRangeScanner.js` — `extractImportRangeFirstArgs_`, `parseFirstArg_`, `resolveImportRangeSourceId_`. The source files have no exports, so the tests load them into a `node:vm` context. Anything touching `SpreadsheetApp` / `UrlFetchApp` (the rest of the library) is tested manually from the Apps Script editor — see README.md's "Testing" section for the checklist. Don't add mock-everything tests for those wrappers.
 
 ## Deploying
 
