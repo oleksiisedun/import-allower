@@ -11,6 +11,12 @@ const SPREADSHEET_URL_ID_REGEX = /\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/;
 const BARE_SPREADSHEET_ID_REGEX = /^[a-zA-Z0-9-_]{20,}$/;
 
 /**
+ * Name of the spreadsheet function whose calls this library detects.
+ * @type {string}
+ */
+const IMPORTRANGE_FUNCTION_NAME_ = 'IMPORTRANGE';
+
+/**
  * Finds every unique source spreadsheet ID referenced by IMPORTRANGE
  * anywhere in a spreadsheet — across all sheets, and including formulas
  * that combine multiple IMPORTRANGE calls (e.g. inside VLOOKUP, joined with
@@ -19,11 +25,7 @@ const BARE_SPREADSHEET_ID_REGEX = /^[a-zA-Z0-9-_]{20,}$/;
  * @returns {string[]}
  */
 function findImportRangeSourceIds(spreadsheetId) {
-  const ss = spreadsheetId ? SpreadsheetApp.openById(spreadsheetId) : SpreadsheetApp.getActiveSpreadsheet();
-  if (!ss) {
-    throw new Error('findImportRangeSourceIds: spreadsheetId was not provided and there is no active spreadsheet.');
-  }
-  return findImportRangeSourceIdsForSpreadsheet_(ss);
+  return findImportRangeSourceIdsForSpreadsheet_(resolveSpreadsheet_(spreadsheetId, 'findImportRangeSourceIds'));
 }
 
 /**
@@ -63,7 +65,7 @@ function forEachImportRangeFormula_(ss, callback) {
     const formulas = dataRange.getFormulas();
     formulas.forEach((rowFormulas, rowOffset) => {
       rowFormulas.forEach((formula, colOffset) => {
-        if (!formula || formula.toUpperCase().indexOf('IMPORTRANGE') === -1) return;
+        if (!formula || !formula.toUpperCase().includes(IMPORTRANGE_FUNCTION_NAME_)) return;
         callback(sheet, formula, startRow + rowOffset, startColumn + colOffset);
       });
     });
@@ -82,7 +84,7 @@ function resolveImportRangeSourceId_(sheet, ref) {
   if (!/^https?:\/\//.test(ref) && !BARE_SPREADSHEET_ID_REGEX.test(ref)) {
     // not already a URL or a bare spreadsheet ID literal — must be a cell reference (e.g. B1); resolve its value
     try { resolved = String(sheet.getRange(ref).getValue()); }
-    catch (e) { return null; }
+    catch { return null; }
   }
 
   const urlMatch = resolved.match(SPREADSHEET_URL_ID_REGEX);
@@ -101,7 +103,7 @@ function resolveImportRangeSourceId_(sheet, ref) {
  */
 function extractImportRangeFirstArgs_(formula) {
   const args = [];
-  const callRegex = /importrange\s*\(/gi;
+  const callRegex = new RegExp(`${IMPORTRANGE_FUNCTION_NAME_}\\s*\\(`, 'gi');
   let m;
   while ((m = callRegex.exec(formula)) !== null) {
     const arg = parseFirstArg_(formula, m.index + m[0].length);

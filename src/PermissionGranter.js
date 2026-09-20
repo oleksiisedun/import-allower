@@ -31,24 +31,27 @@ function grantImportRangeAccess_(destinationSpreadsheetId, sourceSpreadsheetIds)
   if (sourceSpreadsheetIds.length === 0) return [];
 
   const token = ScriptApp.getOAuthToken();
+  /** @type {ImportRangeGrantResult[]} */
   const results = [];
   for (let i = 0; i < sourceSpreadsheetIds.length; i += GRANT_BATCH_SIZE_) {
     const batch = sourceSpreadsheetIds.slice(i, i + GRANT_BATCH_SIZE_);
+    /** @type {GoogleAppsScript.URL_Fetch.URLFetchRequest[]} */
     const requests = batch.map(sourceId => ({
       url: `https://docs.google.com/spreadsheets/d/${destinationSpreadsheetId}/externaldata/addimportrangepermissions?donorDocId=${sourceId}&includes_info_params=true&cros_files=false`,
       method: 'post',
-      headers: { Authorization: 'Bearer ' + token },
+      headers: { Authorization: `Bearer ${token}` },
       muteHttpExceptions: true,
     }));
 
     UrlFetchApp.fetchAll(requests).forEach((response, j) => {
+      const httpStatus = response.getResponseCode();
       const result = {
         sourceId: batch[j],
-        ok: response.getResponseCode() === 200,
-        httpStatus: response.getResponseCode(),
+        ok: httpStatus === 200,
+        httpStatus,
         responseText: response.getContentText(),
       };
-      Logger.log(`Source ${result.sourceId} -> HTTP ${result.httpStatus}${result.ok ? '' : ' (FAILED: ' + result.responseText + ')'}`);
+      Logger.log(`Source ${result.sourceId} -> HTTP ${result.httpStatus}${result.ok ? '' : ` (FAILED: ${result.responseText})`}`);
       results.push(result);
     });
   }

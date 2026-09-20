@@ -9,10 +9,7 @@
  * @returns {ImportRangeGrantResult[]} One result per unique source spreadsheet found; empty if none were found.
  */
 function autoApproveImportRanges(spreadsheetId) {
-  const ss = spreadsheetId ? SpreadsheetApp.openById(spreadsheetId) : SpreadsheetApp.getActiveSpreadsheet();
-  if (!ss) {
-    throw new Error('autoApproveImportRanges: spreadsheetId was not provided and there is no active spreadsheet.');
-  }
+  const ss = resolveSpreadsheet_(spreadsheetId, 'autoApproveImportRanges');
 
   const sourceIds = findImportRangeSourceIdsForSpreadsheet_(ss);
   if (sourceIds.length === 0) {
@@ -39,10 +36,7 @@ function autoApproveImportRanges(spreadsheetId) {
  * @returns {GoogleAppsScript.Script.Trigger}
  */
 function installAutoApproveTrigger(handlerFunctionName, spreadsheetId) {
-  const ss = spreadsheetId ? SpreadsheetApp.openById(spreadsheetId) : SpreadsheetApp.getActiveSpreadsheet();
-  if (!ss) {
-    throw new Error('installAutoApproveTrigger: spreadsheetId was not provided and there is no active spreadsheet.');
-  }
+  const ss = resolveSpreadsheet_(spreadsheetId, 'installAutoApproveTrigger');
   return ScriptApp.newTrigger(handlerFunctionName).forSpreadsheet(ss).onEdit().create();
 }
 
@@ -54,10 +48,7 @@ function installAutoApproveTrigger(handlerFunctionName, spreadsheetId) {
  * @returns {void}
  */
 function logImportRangeFormulas(spreadsheetId) {
-  const ss = spreadsheetId ? SpreadsheetApp.openById(spreadsheetId) : SpreadsheetApp.getActiveSpreadsheet();
-  if (!ss) {
-    throw new Error('logImportRangeFormulas: spreadsheetId was not provided and there is no active spreadsheet.');
-  }
+  const ss = resolveSpreadsheet_(spreadsheetId, 'logImportRangeFormulas');
 
   forEachImportRangeFormula_(ss, (sheet, formula, row, column) => {
     const args = extractImportRangeFirstArgs_(formula);
